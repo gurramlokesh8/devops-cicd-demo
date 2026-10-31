@@ -1,0 +1,2 @@
+1. CI/CD Pipeline:
+Create a yaml pipeline using CI/CD tool of your choice (Jenkins, Azure DevOps, GitHub Actions, GitLab) to Build and Deploy a simple python based service and run the service in the form of a Docker container.

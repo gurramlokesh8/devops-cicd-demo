@@ -1,0 +1,72 @@
+# This pipeline has 3 jobs that run one after another:
+#   1. test  -> installs dependencies and runs the test suite
+#   2. build -> builds the Docker image and pushes it to GitHub Container Registry (GHCR)
+#   3. deploy -> runs the image as a container (placeholder deploy step, see notes below)
+#
+# It triggers whenever code is pushed to "main", or a pull request targets "main".
+
+name: CI/CD
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+
+  # ---------- JOB 1: TEST ----------
+  test:
+    name: Run tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get the code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Run tests
+        run: pytest
+
+  # ---------- JOB 2: BUILD ----------
+  build:
+    name: Build and push Docker image
+    needs: test                 # only runs if the test job passed
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get the code
+        uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}   # provided automatically by GitHub
+
+      - name: Build and push the image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ghcr.io/${{ github.repository }}:latest
+
+  # ---------- JOB 3: DEPLOY ----------
+  deploy:
+    name: Deploy the service
+    needs: build                # only runs if the build job passed
+    runs-on: ubuntu-latest
+    steps:
+      - name: Pull and run the container
+        run: |
+          echo "This step would normally SSH into a server, or call a cloud API,"
+          echo "to pull ghcr.io/${{ github.repository }}:latest and run it."
+          echo "Example of the actual run command on a Docker host:"
+          echo "docker pull ghcr.io/${{ github.repository }}:latest"
+          echo "docker run -d -p 8000:8000 ghcr.io/${{ github.repository }}:latest"
